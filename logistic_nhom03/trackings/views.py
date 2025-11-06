@@ -6,7 +6,7 @@ import requests
 
 db = settings.firestore_db
 
-def getcordinates(address, latitude, longitude):
+def getcordinates(address, latitude = None, longitude = None):
     url = 'https://nominatim.openstreetmap.org/search'
     if address:
         params = {
@@ -21,7 +21,7 @@ def getcordinates(address, latitude, longitude):
             data = res.json()[0]
             print(res.json)
             lat, lon = data['lat'], data['lon']
-            return JsonResponse({'address': address, 'lat': lat, 'lon': lon})
+            return lat, lon
         else:
             return JsonResponse({'error': 'Không tìm thấy vị trí'}, status=404)
     if latitude:
@@ -64,17 +64,26 @@ def showall(request):
         return redirect('login')
 
 def detail(request, tracking_id):
-    doc_ref = db.collection('delivery-tracking').document(tracking_id).get()
-    if not doc_ref.exists:
-        respone = HttpResponse("<h1>Shipper chưa chấp nhận đơn hàng, đợi chuyển hướng....</h1>")
-        respone['Refresh'] = '3; url=/trackings/'
 
-        return respone
-    tracking = doc_ref.to_dict()
-    tracking['current_longitude'] = tracking['current_location'].longitude
-    tracking['current_latitude'] = tracking['current_location'].latitude
-    tracking.pop('current_location')
+    tracking = db.collection('delivery-tracking').document(tracking_id).get()
+    print(tracking)
+    if(not tracking.exists):
+        return redirect('showall')
+    tracking = tracking.to_dict()
+    print(tracking.get('destination'))
+    destination_lat, destination_lon = getcordinates(tracking.get('destination'))
+    ware_house_lat = tracking['ware_house'].latitude
+    ware_house_lon = tracking['ware_house'].longitude
+    current_deliver_lat = tracking['current_location'].latitude
+    current_deliver_lon = tracking['current_location'].longitude
+    export_id = tracking.get('export_id')
     context = {
-        'tracking' : tracking
+        'destination_lat': destination_lat,
+        'destination_lon': destination_lon,
+        'ware_house_lat': ware_house_lat,
+        'ware_house_lon': ware_house_lon,
+        'current_deliver_lat': current_deliver_lat,
+        'current_deliver_lon': current_deliver_lon,
+        'export_id': export_id
     }
     return render(request, 'trackings/detail.html', context)
