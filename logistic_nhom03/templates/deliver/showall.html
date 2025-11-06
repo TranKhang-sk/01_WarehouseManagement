@@ -1,31 +1,41 @@
 {% extends 'base_deliver.html' %}
 {% block content %}
-
-<div class="row g-3">
-
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}" role="alert">
-                    {{ message }}
-                </div>
-            {% endfor %}
-        {% endif %}
-        {% for e in exports %}
-        <div class="card border-primary mb-3">
-            <div class="card-header">{{e.id}}</div>
-            <div class="card-body text-primary">
+  <div class="page-header">
+    <div>
+      <div class="title">Đơn chờ nhận</div>
+      <div class="subtitle">Danh sách đơn giao dành cho tài xế</div>
+    </div>
+  </div>
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}" role="alert">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+    {% for e in exports %}
+    <div class="card-panel">
+        <div class="card-body">
+        <div class="row g-3">
+            <div class="col-12">
+            <div class="card-panel">
+                <div class="card-header">Mã đơn: {{e.id}}</div>
+                <div class="card-body">
                 {% if not valid %}
-                <h5 class="card-title">{{e.address}}</h5>
-                <p class="card-text text-danger">Ngày lấy hàng: {{e.pickup_time}}</p>
-                <p class="card-text">Sản phẩm: {{e.products}}</p>
-                <a href="/deliver/processing/{{e.id}}/" class="card-text btn btn-primary">Xác nhận lấy hàng</a>
-                {% else%}
-                <h5 class="card-title">{{valid}}</h5>
+                    <div class="mb-16"><strong>Địa chỉ:</strong> {{e.address}}</div>
+                    <div class="mb-16"><span class="chip warn">Hạn giao: {{e.pickup_time}}</span></div>
+                    <div class="mb-16"><strong>Sản phẩm:</strong> {{e.products}}</div>
+                    <a href="/deliver/processing/{{e.id}}/" class="btn btn-brand">Đã lấy hàng</a>
+                {% else %}
+                    <h5 class="card-title">{{export.valid}}</h5>
                 {% endif %}
+                </div>
             </div>
         </div>
-        {% endfor %}
+    {% endfor %}
 
+        </div>
+      </div>
+    </div>
 </div>
-
 {% endblock%}
