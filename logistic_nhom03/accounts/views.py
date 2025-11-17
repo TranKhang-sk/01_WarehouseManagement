@@ -8,8 +8,7 @@ import json
 db = settings.firestore_db
 FIREBASE_API_KEY = "AIzaSyCgf2cpIwqhkNh0k6OBhFGDLlPGQH2Qee0"
 
-# === BẮT ĐẦU THÊM MỚI: HÀM KIỂM TRA ADMIN ===
-# Hàm này kiểm tra user có phải là ADMIN không
+# === HÀM KIỂM TRA ADMIN (giữ nguyên) ===
 def check_role_admin(request):
     try:
         if 'firebase_user' not in request.session:
@@ -30,11 +29,9 @@ def check_role_admin(request):
         return 'login' # Lỗi khác thì cứ redirect về login
     
     return None # Là admin, cho phép truy cập
-# === KẾT THÚC THÊM MỚI ===
 
 
 def register(request):
-    # === CHỈNH SỬA: GỌI HÀM KIỂM TRA ADMIN ===
     redirect_to = check_role_admin(request)
     if redirect_to == 'login':
         messages.error(request, 'Bạn phải đăng nhập để thực hiện việc này.')
@@ -42,7 +39,6 @@ def register(request):
     if redirect_to == 'dashboard':
         messages.error(request, 'Bạn không có quyền truy cập trang này.')
         return redirect('dashboard')
-    # === KẾT THÚC CHỈNH SỬA ===
 
     if request.method == 'POST':
         name = request.POST.get('name')
@@ -67,8 +63,22 @@ def register(request):
             })
             messages.success(request, 'Tạo tài khoản thành công')
             return redirect('showall')
-        except Exception as e:
-            messages.error(request, f'Lỗi: {str(e)}')
+        
+        # === BẮT ĐẦU CHỈNH SỬA: DỊCH LỖI ĐĂNG KÝ (SỬA LẠI) ===
+        except Exception as e: # Bắt tất cả lỗi từ Firebase
+            error_message = str(e)
+            print(f"Firebase Register Error: {error_message}") # Dùng để debug
+
+            if "EMAIL_EXISTS" in error_message or "EmailAlreadyExistsError" in error_message:
+                messages.error(request, 'Lỗi: Email này đã tồn tại trong hệ thống.')
+            elif "WEAK_PASSWORD" in error_message or "Password must be at least 6 characters" in error_message:
+                 messages.error(request, 'Lỗi: Mật khẩu quá yếu, cần ít nhất 6 ký tự.')
+            elif "INVALID_EMAIL" in error_message:
+                 messages.error(request, 'Lỗi: Định dạng email không hợp lệ.')
+            else:
+                 # Lỗi chung, không hiển thị tiếng Anh
+                messages.error(request, f'Lỗi không xác định khi tạo tài khoản.')
+        # === KẾT THÚC CHỈNH SỬA ===
             
     return render(request, 'accounts/register.html')
 
@@ -91,7 +101,6 @@ def login_view(request):
             data = res.json()
             if 'idToken' in data:
                 request.session['firebase_user'] = data
-                # Xóa thông báo lỗi cũ nếu đăng nhập thành công
                 if messages.get_messages(request):
                     list(messages.get_messages(request))
 
@@ -110,9 +119,24 @@ def login_view(request):
                     return redirect('showall')
                 
             else:
-                messages.error(request, 'Sai email hoặc mật khẩu.')
+                # === LOGIC DỊCH LỖI ĐĂNG NHẬP (giữ nguyên) ===
+                error_message = data.get('error', {}).get('message', 'UNKNOWN_ERROR')
+                print(f"Firebase Auth Error: {error_message}") # Dùng để debug
+
+                if messages.get_messages(request):
+                    list(messages.get_messages(request))
+
+                if error_message == 'EMAIL_NOT_FOUND':
+                    messages.error(request, 'Lỗi: Không tìm thấy tài khoản với email này.')
+                elif error_message == 'INVALID_PASSWORD':
+                    messages.error(request, 'Lỗi: Sai mật khẩu.')
+                elif error_message == 'USER_DISABLED':
+                    messages.error(request, 'Lỗi: Tài khoản này đã bị vô hiệu hóa.')
+                else:
+                    messages.error(request, 'Lỗi: Sai email hoặc mật khẩu.')
+
         except Exception as e:
-            messages.error(request, str(e))
+            messages.error(request, f'Lỗi kết nối: {str(e)}')
     return render(request, 'accounts/login.html')
 
 def logout_view(request):
@@ -123,7 +147,6 @@ def logout_view(request):
 
 
 def showall(request):
-    # === CHỈNH SỬA: GỌI HÀM KIỂM TRA ADMIN ===
     redirect_to = check_role_admin(request)
     if redirect_to == 'login':
         messages.error(request, 'Bạn phải đăng nhập để thực hiện việc này.')
@@ -131,21 +154,35 @@ def showall(request):
     if redirect_to == 'dashboard':
         messages.error(request, 'Bạn không có quyền truy cập trang này.')
         return redirect('dashboard')
-    # === KẾT THÚC CHỈNH SỬA ===
 
+    # === LOGIC TÌM KIẾM THEO TÊN VÀ SĐT (giữ nguyên) ===
+    keyword = request.GET.get('q', None)
+    
     user_ref = db.collection('users').get()
     user_list = []
+
     for user in user_ref:
         item = user.to_dict()
         item['id'] = user.id
-        user_list.append(item)
+
+        if keyword:
+            keyword_lower = keyword.lower()
+            name_lower = item.get('name', '').lower()
+            phone_lower = item.get('phone', '').lower() 
+
+            if keyword_lower in name_lower or keyword_lower in phone_lower:
+                user_list.append(item)
+        
+        else:
+            user_list.append(item) 
+
     context = {
         'users': user_list
     }
     return render(request, 'accounts/showall.html', context)
 
+
 def delete(request, user_id):
-    # === BẮT ĐẦU THÊM MỚI: GỌI HÀM KIỂM TRA ADMIN ===
     redirect_to = check_role_admin(request)
     if redirect_to == 'login':
         messages.error(request, 'Bạn phải đăng nhập để thực hiện việc này.')
@@ -153,14 +190,12 @@ def delete(request, user_id):
     if redirect_to == 'dashboard':
         messages.error(request, 'Bạn không có quyền truy cập trang này.')
         return redirect('dashboard')
-    # === KẾT THÚC THÊM MỚI ===
 
     if request.method == 'POST':
         db.collection('users').document(user_id).delete()
         return redirect(showall)
     
 def update(request, user_id):
-    # === BẮT ĐẦU THÊM MỚI: GỌI HÀM KIỂM TRA ADMIN ===
     redirect_to = check_role_admin(request)
     if redirect_to == 'login':
         messages.error(request, 'Bạn phải đăng nhập để thực hiện việc này.')
@@ -168,7 +203,6 @@ def update(request, user_id):
     if redirect_to == 'dashboard':
         messages.error(request, 'Bạn không có quyền truy cập trang này.')
         return redirect('dashboard')
-    # === KẾT THÚC THÊM MỚI ===
 
     if request.method == 'POST':
         data = {}
