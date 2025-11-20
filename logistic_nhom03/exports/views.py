@@ -47,6 +47,7 @@ def create(request):
             request.session['craft_export'] = data
             deliver_ref = db.collection('users').get()
             deliver_list = []
+            busy_deliver_list = []
             for doc in deliver_ref:
                 user = doc.to_dict()
                 if user.get('role') == 'deliver':
@@ -56,31 +57,39 @@ def create(request):
                 exports_ref = db.collection('exports').get()
                 for export in exports_ref:
                     item = export.to_dict()
-                    
                     for deliverID in deliver_list:
                         if item.get('assigned_to') == deliverID:
                             deliver_list.remove(deliverID)
                     print("============================") 
-                    print("danh sách lọc" + str(deliver_list)) 
-                    diff =(item.get('pickup_time') - datetime.fromisoformat(data.get('pickup_time')))
-                    print(str(diff))
-                    if abs(diff) > timedelta(days=7) :
-                        deliver_list.append(item.get('assigned_to'))
-                    print("============================") 
-                    print("danh sách thêm" + str(deliver_list))
+                    print("danh sách sau lọc" + str(deliver_list)) 
+                    if(item.get('status') != "delivered"):
+                        diff =(item.get('pickup_time') - datetime.fromisoformat(data.get('pickup_time')))
+                        print(str(diff))
+                        if abs(diff) > timedelta(days=7) :
+                            if(item.get('status') != "delivering") and (item.get('assigned_to') != 'finding'):
+                                deliver_list.append(item.get('assigned_to'))
+                        print("============================") 
+                        print("danh sách thêm" + str(deliver_list))
             deliver_list_name = []
             for deliver in deliver_list:
-                print(str(deliver))
-                doc_ref = db.collection('users').document(deliver).get()
-                item = doc_ref.to_dict()
-                item['id'] = doc_ref.id
-                deliver_list_name.append(item)
+                if(deliver != 'finding'):
+                    doc_ref = db.collection('users').document(deliver).get()
+                    item = doc_ref.to_dict()
+                    item['id'] = doc_ref.id
+                    deliver_list_name.append(item)
+            print("danh sách tìm kiếm tài xế 1:"+ str(deliver_list_name))
             product_ref = db.collection('products').get()
             products = []
             for doc in product_ref:
                 item = doc.to_dict()
                 item['id'] = doc.id
                 products.append(item)
+            if(len(deliver_list_name) == 0 ):
+                item = {}
+                item['id'] = "finding"
+                item['name'] = "Tài xế hiện tại không khả dụng, đơn sẽ được tài xế nhận tự do nếu có."
+                deliver_list_name.append(item)
+                print("danh sách tìm kiếm tài xế 2:"+ str(deliver_list_name))
             context = {
                 'products': products,
                 'deliver': deliver_list_name

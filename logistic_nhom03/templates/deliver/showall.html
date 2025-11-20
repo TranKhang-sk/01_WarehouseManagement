@@ -19,7 +19,7 @@
         <div class="row g-3">
             <div class="col-12">
             <div class="card-panel">
-                <div class="card-header">Mã đơn: {{e.id}}</div>
+                <div class="card-header">Mã đơn: {{e.id}} <span class="text-success">{{e.noti}}</span></div>
                 <div class="card-body">
                 {% if not valid %}
                     <div class="mb-16"><strong>Địa chỉ:</strong> {{e.address}}</div>

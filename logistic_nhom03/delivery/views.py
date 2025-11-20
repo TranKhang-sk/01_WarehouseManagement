@@ -16,10 +16,12 @@ def showall(request):
     product_list = {}
     for doc in docs_ref:
         item = doc.to_dict()
-        if item.get('assigned_to') == deliver_id and item.get('status') == 'pending':
+        if (item.get('assigned_to') == deliver_id or item.get('assigned_to') == "finding")and item.get('status') == 'pending':
             item['id'] = doc.id
+            if(item.get('assigned_to') == "finding"):
+                item['noti'] = "Đơn chờ tài rãnh"
             for product_id in item['products']:
-                product_name = db.collection('products').document(product_id).get().to_dict().get('name')           
+                product_name = db.collection('products').document(product_id).get().to_dict().get('name')
                 product_list[product_name] = item['products'].get(product_id)
                 item['products'] = product_list
             exports.append(item)
