@@ -96,8 +96,17 @@
     .btn-primary{background:var(--accent);color:#fff}
     .btn-primary:hover{background:var(--accent-2)}
 
-    .messages{margin-top:8px}
-    .msg{padding:10px 12px;background:#fff5f5;color:#b42318;border:1px solid #fecaca;border-radius:10px;font-size:14px}
+    /* Phần hiển thị lỗi từ Server (Python trả về) */
+    .messages{margin-bottom:16px}
+    .msg{
+      padding:10px 12px;
+      background:#fff5f5;
+      color:#b42318;
+      border:1px solid #fecaca;
+      border-radius:10px;
+      font-size:14px;
+      margin-bottom: 8px;
+    }
 
     .footer{padding:0 28px 24px;display:flex;justify-content:center;gap:8px;color:var(--muted);font-size:14px}
     .footer a{color:var(--brand);text-decoration:none}
@@ -145,15 +154,42 @@
           <p class="desc">Đăng nhập để truy cập ứng dụng quản lý kho.</p>
         </header>
         <div class="card-body">
+          
+          {% if messages %}
+            <div class="messages">
+              {% for message in messages %}
+                <div class="msg {{ message.tags }}">{{ message }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+
           <form method="POST">
             {% csrf_token %}
             <div>
               <label for="email">Email</label>
-              <input id="email" type="email" name="email" placeholder="nhanvien@congty.com" required autocomplete="username" />
+              <input 
+                id="email" 
+                type="email" 
+                name="email" 
+                placeholder="username@gmail.com" 
+                required 
+                autocomplete="username"
+                oninvalid="this.setCustomValidity(this.validity.valueMissing ? 'Vui lòng nhập email' : 'Email sai định dạng (ví dụ: abc@gmail.com)')"
+                oninput="this.setCustomValidity(this.validity.valueMissing ? 'Vui lòng nhập email của bạn' : 'Email sai định dạng')"
+            />
             </div>
             <div>
               <label for="password">Mật khẩu</label>
-              <input id="password" type="password" name="password" placeholder="••••••••" required autocomplete="current-password" />
+              <input 
+                id="password" 
+                type="password" 
+                name="password" 
+                placeholder="••••••••" 
+                required 
+                autocomplete="current-password" 
+                oninvalid="this.setCustomValidity('Vui lòng điền mật khẩu vào trường này.')"
+                oninput="this.setCustomValidity('')"
+              />
             </div>
             <div class="actions">
               <button class="btn btn-primary" type="submit">Đăng nhập</button>
